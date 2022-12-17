@@ -135,7 +135,7 @@ ednMap =
                 Just pair ->
                     pairUp (pair :: pairs) (idx + 2) array
     in
-    andThen (Array.fromList >> pairUp [] 0) (ednSequence "(" ")")
+    andThen (Array.fromList >> pairUp [] 0) (ednSequence "{" "}")
         |> map EdnMap
 
 
