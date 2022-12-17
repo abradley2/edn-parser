@@ -69,10 +69,10 @@ ednCharacter =
     succeed EdnChar
         |. token "\\"
         |= oneOf
-            [ map (always '\n') (keyword "\\newline")
-            , map (always '\t') (keyword "\\tab")
-            , map (always ' ') (keyword "\\space")
-            , map (always '\u{000D}') (keyword "\\return")
+            [ map (always '\n') (keyword "newline")
+            , map (always '\t') (keyword "tab")
+            , map (always ' ') (keyword "space")
+            , map (always '\u{000D}') (keyword "return")
             , backtrackable
                 (succeed identity
                     |. token "u"
