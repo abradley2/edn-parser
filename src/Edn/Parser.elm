@@ -3,6 +3,7 @@ module Edn.Parser exposing (..)
 import Array exposing (Array)
 import Edn exposing (Edn(..))
 import Edn.Parser.String
+import Edn.Parser.Unicode exposing (unicodeEscape)
 import Parser exposing (..)
 import Set
 
@@ -46,12 +47,12 @@ ednCharacter =
     let
         charCodeParser : String -> Parser Char
         charCodeParser code =
-            case run int ("0x" ++ code) of
+            case run unicodeEscape ("u" ++ code) of
                 Ok charCode ->
-                    succeed (Char.fromCode charCode)
+                    succeed charCode
 
                 _ ->
-                    problem "invalid character code"
+                    problem ("Invalid character code: " ++ "\\u" ++ code)
 
         stringParser : String -> Parser Char
         stringParser charString =
@@ -78,8 +79,8 @@ ednCharacter =
                     |. token "u"
                     |= andThen charCodeParser
                         (variable
-                            { start = Char.isAlphaNum
-                            , inner = Char.isAlphaNum
+                            { start = Char.isHexDigit
+                            , inner = Char.isHexDigit
                             , reserved = Set.fromList []
                             }
                         )
@@ -197,7 +198,12 @@ ednString =
 
 ednInt : Parser Edn
 ednInt =
-    map EdnInt int
+    oneOf
+        [ succeed (\v -> EdnInt (v * -1))
+            |. symbol "-"
+            |= int
+        , map EdnInt int
+        ]
 
 
 ednNil : Parser Edn

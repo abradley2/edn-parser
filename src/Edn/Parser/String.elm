@@ -1,6 +1,8 @@
-module Edn.Parser.String exposing (string)
+module Edn.Parser.String exposing (codeToChar, string, unicode)
 
+import Edn.Parser.Unicode exposing (unicodeEscape)
 import Parser exposing (..)
+import Set
 
 
 
@@ -25,11 +27,25 @@ stringHelp revChunks =
             |= oneOf
                 [ map (\_ -> "\n") (token "n")
                 , map (\_ -> "\t") (token "t")
+                , map (\_ -> "\\") (token "\\")
                 , map (\_ -> "\u{000D}") (token "r")
                 , succeed String.fromChar
-                    |. token "u{"
-                    |= unicode
-                    |. token "}"
+                    |. token "u"
+                    |= (variable
+                            { start = Char.isHexDigit
+                            , inner = Char.isHexDigit
+                            , reserved = Set.empty
+                            }
+                            |> andThen
+                                (\hexStr ->
+                                    case run unicodeEscape ("u" ++ hexStr) of
+                                        Ok uniChar ->
+                                            succeed uniChar
+
+                                        Err _ ->
+                                            problem ("Invalid unicode found: " ++ "\\u" ++ hexStr)
+                                )
+                       )
                 ]
         , token "\""
             |> map (\_ -> Done (String.join "" (List.reverse revChunks)))

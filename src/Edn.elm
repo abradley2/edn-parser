@@ -1,7 +1,6 @@
 module Edn exposing (..)
 
 import Array exposing (Array)
-import Set exposing (Set)
 
 
 type Edn
