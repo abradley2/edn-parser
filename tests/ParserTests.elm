@@ -16,6 +16,12 @@ checkParsing =
         >> (\predicates -> Expect.all predicates ())
 
 
+stringWithNewLine =
+    """"a
+  b
+\""""
+
+
 suite : Test
 suite =
     describe "Parsing"
@@ -25,14 +31,17 @@ suite =
                     [ ( "true", EdnBool True )
                     , ( "false", EdnBool False )
                     ]
-        , fuzz int "integers" <|
+        , fuzz int "fuzz integers" <|
             \val ->
                 checkParsing [ ( String.fromInt val, EdnInt val ) ]
-        , fuzz string "strings" <|
-            \val ->
+        , test "strings" <|
+            \_ ->
                 checkParsing
-                    [ ( Json.Encode.encode 2 (Json.Encode.string val)
-                      , EdnString val
-                      )
+                    [ ( Json.Encode.encode 0 (Json.Encode.string ""), EdnString "" )
+                    , ( Json.Encode.encode 0 (Json.Encode.string "\\"), EdnString "\\" )
+                    , ( Json.Encode.encode 0 (Json.Encode.string "\n"), EdnString "\n" )
+                    , ( "\"a string\\twith\\\\escape\\\"'s\"", EdnString "a string\twith\\escape\"'s" )
+                    , ( """ "me & you \\u0026 them" """, EdnString "me & you & them" )
+                    , ( stringWithNewLine, EdnString "a\n  b\n" )
                     ]
         ]
