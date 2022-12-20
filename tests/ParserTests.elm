@@ -45,4 +45,8 @@ suite =
                     , ( "\"\\\\00\"", EdnString "\\00" )
                     , ( stringWithNewLine, EdnString "a\n  b\n" )
                     ]
+        , test "nil" <|
+            \_ ->
+                checkParsing
+                    [ ( "nil", EdnNil ) ]
         ]
