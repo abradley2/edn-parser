@@ -42,6 +42,7 @@ suite =
                     , ( Json.Encode.encode 0 (Json.Encode.string "\n"), EdnString "\n" )
                     , ( "\"a string\\twith\\\\escape\\\"'s\"", EdnString "a string\twith\\escape\"'s" )
                     , ( """ "me & you \\u0026 them" """, EdnString "me & you & them" )
+                    , ( "\"\\\\00\"", EdnString "\\00" )
                     , ( stringWithNewLine, EdnString "a\n  b\n" )
                     ]
         ]
