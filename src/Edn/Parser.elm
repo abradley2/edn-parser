@@ -1,5 +1,14 @@
 module Edn.Parser exposing (..)
 
+{-| A parser for the `Edn` union type, for use with [elm/parser](https://package.elm-lang.org/packages/elm/parser/latest/)
+
+
+# Main Functionality
+
+@docs edn
+
+-}
+
 import Array exposing (Array)
 import Edn exposing (Edn(..))
 import Edn.Parser.String
@@ -14,12 +23,12 @@ edn =
         |. ednWhitespace
         |= oneOf
             [ ednString
-            , ednInt
             , ednBool
             , ednNil
-            , ednFloat
             , ednKeyword
             , ednCharacter
+            , backtrackable ednInt
+            , ednFloat
             , lazy (\_ -> ednTag)
             , lazy (\_ -> ednSet)
             , lazy (\_ -> ednVector)
@@ -40,6 +49,14 @@ ednWhitespace =
                 || (c == '\u{000D}')
                 || (c == ',')
         )
+
+
+optionalWhitespace : Parser ()
+optionalWhitespace =
+    oneOf
+        [ ednWhitespace
+        , succeed ()
+        ]
 
 
 ednCharacter : Parser Edn
@@ -159,15 +176,21 @@ ednSequence : String -> String -> Parser (List Edn)
 ednSequence startToken endToken =
     succeed identity
         |. token startToken
+        |. optionalWhitespace
         |= loop [] (ednSequenceHelper endToken)
 
 
 ednSequenceHelper : String -> List Edn -> Parser (Step (List Edn) (List Edn))
 ednSequenceHelper end items =
     oneOf
-        [ map (always <| Done (List.reverse items)) (token end)
-        , map (always <| Loop items) ednWhitespace
-        , map (\item -> Loop (item :: items)) edn
+        [ backtrackable
+            (succeed (\_ -> Done (List.reverse items))
+                |. optionalWhitespace
+                |= token end
+            )
+        , succeed (\item -> Loop (item :: items))
+            |. ednWhitespace
+            |= edn
         ]
 
 
@@ -179,13 +202,13 @@ ednTag =
                 |= variable
                     { start = Char.isAlphaNum
                     , inner = \c -> Char.isAlphaNum c || c == '-' || c == '_'
-                    , reserved = Set.empty
+                    , reserved = Set.fromList [ "#", "/" ]
                     }
                 |. symbol "/"
                 |= variable
                     { start = Char.isAlphaNum
                     , inner = \c -> Char.isAlphaNum c || c == '-' || c == '_'
-                    , reserved = Set.empty
+                    , reserved = Set.fromList [ "#", "/" ]
                     }
            )
         |= edn
@@ -223,4 +246,9 @@ ednBool =
 
 ednFloat : Parser Edn
 ednFloat =
-    map EdnFloat float
+    oneOf
+        [ succeed (\v -> EdnFloat (v * -1))
+            |. symbol "-"
+            |= float
+        , map EdnFloat float
+        ]

@@ -6,7 +6,9 @@ import Expect exposing (Expectation)
 import Fuzz exposing (..)
 import Json.Encode
 import Parser exposing (run)
+import Set
 import Test exposing (Test, describe, fuzz, test)
+import TestCases
 
 
 checkParsing : List ( String, Edn ) -> Expectation
@@ -16,6 +18,7 @@ checkParsing =
         >> (\predicates -> Expect.all predicates ())
 
 
+stringWithNewLine : String
 stringWithNewLine =
     """"a
   b
@@ -31,6 +34,22 @@ suite =
                     [ ( "true", EdnBool True )
                     , ( "false", EdnBool False )
                     ]
+        , fuzz float "fuzz floats" <|
+            \val ->
+                case String.toInt (String.fromFloat val) of
+                    Nothing ->
+                        if
+                            Set.member
+                                (String.fromFloat val)
+                                (Set.fromList [ "Infinity", "-Infinity", "NaN" ])
+                        then
+                            Expect.pass
+
+                        else
+                            checkParsing [ ( String.fromFloat val, EdnFloat val ) ]
+
+                    Just _ ->
+                        Expect.pass
         , fuzz int "fuzz integers" <|
             \val ->
                 checkParsing [ ( String.fromInt val, EdnInt val ) ]
@@ -49,4 +68,12 @@ suite =
             \_ ->
                 checkParsing
                     [ ( "nil", EdnNil ) ]
+        , test "example big edn document" <|
+            \_ ->
+                case run edn TestCases.casePlaylist of
+                    Ok _ ->
+                        Expect.pass
+
+                    Err err ->
+                        Expect.equal [] err
         ]
