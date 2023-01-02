@@ -115,7 +115,7 @@ ednCharacter =
 
 ednKeyword : Parser Edn
 ednKeyword =
-    succeed (\namespace kw -> EdnKeyword ( namespace, kw ))
+    succeed EdnKeyword
         |. token ":"
         |= oneOf
             [ succeed Just
@@ -148,12 +148,22 @@ ednMap =
                     (Array.get (idx + 1) array)
             of
                 Nothing ->
-                    problem "Map has an uneven number of items"
+                    succeed pairs
 
                 Just pair ->
                     pairUp (pair :: pairs) (idx + 2) array
+
+        pairCheck pairs =
+            case modBy 2 (List.length pairs) of
+                0 ->
+                    succeed pairs
+
+                _ ->
+                    problem "Map has an uneven number of items"
     in
-    andThen (Array.fromList >> pairUp [] 0) (ednSequence "{" "}")
+    ednSequence "{" "}"
+        |> andThen pairCheck
+        |> andThen (Array.fromList >> pairUp [] 0)
         |> map EdnMap
 
 
@@ -196,7 +206,7 @@ ednSequenceHelper end items =
 
 ednTag : Parser Edn
 ednTag =
-    succeed EdnTag
+    succeed (\( ns, tag ) val -> EdnTag ns tag val)
         |= (succeed Tuple.pair
                 |. symbol "#"
                 |= variable

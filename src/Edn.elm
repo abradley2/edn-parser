@@ -28,7 +28,7 @@ before the EDN value that they annotate.
 type Edn
     = EdnString String
     | EdnVariable String
-    | EdnKeyword ( Maybe String, String )
+    | EdnKeyword (Maybe String) String
     | EdnList (List Edn)
     | EdnVector (Array Edn)
     | EdnMap (List ( Edn, Edn ))
@@ -38,4 +38,4 @@ type Edn
     | EdnInt Int
     | EdnFloat Float
     | EdnChar Char
-    | EdnTag ( String, String ) Edn
+    | EdnTag String String Edn

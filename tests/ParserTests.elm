@@ -71,15 +71,39 @@ suite =
         , test "keyword" <|
             \_ ->
                 checkParsing
-                    [ ( ":tony", EdnKeyword ( Nothing, "tony" ) )
-                    , ( ":tony/bradley", EdnKeyword ( Just "tony", "bradley" ) )
+                    [ ( ":tony", EdnKeyword Nothing "tony" )
+                    , ( ":tony/bradley", EdnKeyword (Just "tony") "bradley" )
                     ]
+        , test "Maps" <|
+            \_ ->
+                checkParsing
+                    [ ( """{:1 1 :2 2}"""
+                      , EdnMap
+                            [ ( EdnKeyword Nothing "1", EdnInt 1 )
+                            , ( EdnKeyword Nothing "2", EdnInt 2 )
+                            ]
+                      )
+                    ]
+        , test "sets" <|
+            \_ ->
+                checkParsing
+                    [ ( """#{1 "2" false}""", EdnSet [ EdnInt 1, EdnString "2", EdnBool False ] )
+                    , ( """#{{:1 1 :2 2} "test"}"""
+                      , EdnSet
+                            [ EdnMap
+                                [ ( EdnKeyword Nothing "1", EdnInt 1 )
+                                , ( EdnKeyword Nothing "2", EdnInt 2 )
+                                ]
+                            , EdnString "test"
+                            ]
+                      )
+                    ]
+        , test "example big edn document" <|
+            \_ ->
+                case run edn TestCases.casePlaylist of
+                    Ok _ ->
+                        Expect.pass
 
-        -- , test "example big edn document" <|
-        --     \_ ->
-        --         case run edn TestCases.casePlaylist of
-        --             Ok _ ->
-        --                 Expect.pass
-        --             Err err ->
-        --                 Expect.equal [] err
+                    Err err ->
+                        Expect.equal [] err
         ]
