@@ -118,15 +118,15 @@ ednKeyword =
     succeed (\namespace kw -> EdnKeyword ( namespace, kw ))
         |. token ":"
         |= oneOf
-            [ map Just
-                (backtrackable
+            [ succeed Just
+                |= backtrackable
                     (variable
                         { start = Char.isAlphaNum
                         , inner = \c -> Char.isAlphaNum c || c == '-' || c == '_'
-                        , reserved = Set.empty
+                        , reserved = Set.fromList [ "/" ]
                         }
                     )
-                )
+                |. token "/"
             , succeed Nothing
             ]
         |= variable

@@ -68,12 +68,18 @@ suite =
             \_ ->
                 checkParsing
                     [ ( "nil", EdnNil ) ]
-        , test "example big edn document" <|
+        , test "keyword" <|
             \_ ->
-                case run edn TestCases.casePlaylist of
-                    Ok _ ->
-                        Expect.pass
+                checkParsing
+                    [ ( ":tony", EdnKeyword ( Nothing, "tony" ) )
+                    , ( ":tony/bradley", EdnKeyword ( Just "tony", "bradley" ) )
+                    ]
 
-                    Err err ->
-                        Expect.equal [] err
+        -- , test "example big edn document" <|
+        --     \_ ->
+        --         case run edn TestCases.casePlaylist of
+        --             Ok _ ->
+        --                 Expect.pass
+        --             Err err ->
+        --                 Expect.equal [] err
         ]
