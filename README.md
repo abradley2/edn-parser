@@ -34,7 +34,8 @@ type Edn
 
 This library doesn't provide Encoders and Decoders for the types in the `Edn` module.
 
-Extensible Data Notation has a few interesting types that don't necessarily translate 1
+Extensible Data Notation has a few interesting types that don't necessarily translate 1 to 1
+without making some decisions about how that transform happens.
 
 * Edn maps can have keys that are not strings. The `EdnMap` type in this library represents
 them as `List (Edn, Edn)`.
