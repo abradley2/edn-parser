@@ -1,4 +1,4 @@
-module Edn exposing (..)
+module Edn exposing (Edn(..))
 
 {-| The main union type representing an Extensible Data Notation document.
 

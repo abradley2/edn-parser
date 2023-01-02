@@ -12,7 +12,7 @@ type Edn
     = EdnString String
     | EdnSymbol String
     -- keywords are represented as strings with optional namespace
-    | EdnKeyword ( Maybe String, String )
+    | EdnKeyword (Maybe String) String
     | EdnList (List Edn)
     | EdnVector (Array Edn)
     -- maps in Edn can have keys that are not strings, so we represent them as a list
@@ -26,8 +26,8 @@ type Edn
     | EdnInt Int
     | EdnFloat Float
     | EdnChar Char
-    -- user defined tags have a namespace and a name
-    | EdnTag ( String, String ) Edn
+    -- user defined tags have a namespace and a name, followed by a nested edn value
+    | EdnTag String String Edn
 ```
 
 # Decoding/Encoding

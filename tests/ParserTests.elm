@@ -1,5 +1,6 @@
 module ParserTests exposing (..)
 
+import Array
 import Edn exposing (..)
 import Edn.Parser exposing (edn)
 import Expect exposing (Expectation)
@@ -84,6 +85,10 @@ suite =
                             ]
                       )
                     ]
+        , test "lists" <|
+            \_ ->
+                checkParsing
+                    [ ( """(1 2 3)""", EdnList [ EdnInt 1, EdnInt 2, EdnInt 3 ] ) ]
         , test "sets" <|
             \_ ->
                 checkParsing
@@ -96,6 +101,14 @@ suite =
                                 ]
                             , EdnString "test"
                             ]
+                      )
+                    ]
+        , test "vectors" <|
+            \_ ->
+                checkParsing
+                    [ ( """[() #{} {}]"""
+                      , EdnVector
+                            (Array.fromList [ EdnList [], EdnSet [], EdnMap [] ])
                       )
                     ]
         , test "example big edn document" <|

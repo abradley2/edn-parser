@@ -1,4 +1,4 @@
-module Edn.Parser exposing (..)
+module Edn.Parser exposing (edn)
 
 {-| A parser for the `Edn` union type, for use with [elm/parser](https://package.elm-lang.org/packages/elm/parser/latest/)
 
@@ -17,6 +17,8 @@ import Parser exposing (..)
 import Set
 
 
+{-| Parser for the Edn datatype
+-}
 edn : Parser Edn
 edn =
     succeed identity
@@ -29,7 +31,7 @@ edn =
             , ednCharacter
             , backtrackable ednInt
             , ednFloat
-            , lazy (\_ -> ednTag)
+            , backtrackable (lazy (\_ -> ednTag))
             , lazy (\_ -> ednSet)
             , lazy (\_ -> ednVector)
             , lazy (\_ -> ednList)
@@ -164,7 +166,7 @@ ednMap =
     ednSequence "{" "}"
         |> andThen pairCheck
         |> andThen (Array.fromList >> pairUp [] 0)
-        |> map EdnMap
+        |> map (List.reverse >> EdnMap)
 
 
 ednList : Parser Edn
