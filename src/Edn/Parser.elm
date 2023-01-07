@@ -1,4 +1,7 @@
-module Edn.Parser exposing (edn)
+module Edn.Parser exposing
+    ( ednParser
+    , runParser
+    )
 
 {-| A parser for the `Edn` union type, for use with [elm/parser](https://package.elm-lang.org/packages/elm/parser/latest/)
 
@@ -17,10 +20,15 @@ import Parser exposing (..)
 import Set
 
 
+runParser : String -> Result (List DeadEnd) Edn
+runParser =
+    Parser.run ednParser
+
+
 {-| Parser for the Edn datatype
 -}
-edn : Parser Edn
-edn =
+ednParser : Parser Edn
+ednParser =
     succeed identity
         |. ednWhitespace
         |= oneOf
@@ -30,7 +38,8 @@ edn =
             , ednKeyword
             , ednCharacter
             , backtrackable ednInt
-            , ednFloat
+            , backtrackable ednFloat
+            , ednSymbol
             , backtrackable (lazy (\_ -> ednTag))
             , lazy (\_ -> ednSet)
             , lazy (\_ -> ednVector)
@@ -202,7 +211,7 @@ ednSequenceHelper end items =
             )
         , succeed (\item -> Loop (item :: items))
             |. ednWhitespace
-            |= edn
+            |= ednParser
         ]
 
 
@@ -223,7 +232,7 @@ ednTag =
                     , reserved = Set.fromList [ "#", "/" ]
                     }
            )
-        |= edn
+        |= ednParser
 
 
 ednString : Parser Edn
@@ -264,3 +273,76 @@ ednFloat =
             |= float
         , map EdnFloat float
         ]
+
+
+{-| Symbols are used to represent identifiers,
+and should map to something other than strings, if possible.
+
+Symbols begin with a non-numeric character and can contain alphanumeric characters
+and . \* + ! - \_ ? $ % & = < >. If -, + or . are the first character,
+the second character (if any) must be non-numeric.
+Additionally, : # are allowed as constituent characters in
+symbols other than as the first character.
+
+/ has special meaning in symbols. It can be used once only in the middle of a
+symbol to separate the prefix (often a namespace) from the name, e.g.
+my-namespace/foo. / by itself is a legal symbol, but otherwise neither the
+prefix nor the name part can be empty when the symbol contains /.
+
+If a symbol has a prefix and /, the following name component should follow the
+first-character restrictions for symbols as a whole. This is to avoid
+ambiguity in reading contexts where prefixes might be presumed as implicitly
+included namespaces and elided thereafter.
+
+-}
+ednSymbol : Parser Edn
+ednSymbol =
+    oneOf
+        [ -- first check if this is just a standalone symbol. This can
+          -- uniquely start with "/" if that is the _only_ character in the
+          -- symbol
+          variable
+            { start =
+                \c ->
+                    Set.member c
+                        (Set.fromList
+                            [ '/'
+                            , '.'
+                            , '*'
+                            , '+'
+                            , '!'
+                            , '-'
+                            , '_'
+                            , '?'
+                            , '$'
+                            , '%'
+                            , '&'
+                            , '='
+                            , '<'
+                            , '>'
+                            ]
+                        )
+            , inner = always False
+            , reserved = Set.empty
+            }
+
+        -- next we have another special case. If a symbol starts with a
+        -- + or a - the _second_ character must be a non-numeric
+        -- alphabetical character. Presumably this is to distinguish it
+        -- between integers and floats
+        , succeed (\prefix alphaNum rest -> prefix ++ alphaNum ++ rest)
+            |= variable
+                { start = \c -> Set.member c (Set.fromList [ '-', '+' ])
+                , inner = always False
+                , reserved = Set.empty
+                }
+            |= variable
+                { start = Char.isAlpha
+                , inner = always False
+                , reserved = Set.empty
+                }
+            |= oneOf
+                [ succeed ""
+                ]
+        ]
+        |> map EdnSymbol

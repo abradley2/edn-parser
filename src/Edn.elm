@@ -39,3 +39,4 @@ type Edn
     | EdnFloat Float
     | EdnChar Char
     | EdnTag String String Edn
+    | EdnSymbol String
