@@ -116,6 +116,10 @@ suite =
                 checkParsing
                     [ ( "a", EdnSymbol "a" )
                     , ( "-1", EdnInt -1 )
+                    , ( "+a1", EdnSymbol "+a1" )
+                    , ( "a/a...", EdnSymbol "a/a..." )
+                    , ( "a.a", EdnSymbol "a.a" )
+                    , ( "a#a", EdnSymbol "a#a" )
                     ]
         , test "example big edn document" <|
             \_ ->

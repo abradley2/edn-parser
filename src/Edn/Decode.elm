@@ -2,7 +2,6 @@ module Edn.Decode exposing (..)
 
 import Array exposing (Array)
 import Edn exposing (Edn(..))
-import Parser exposing (getOffset)
 import Set exposing (Set)
 
 

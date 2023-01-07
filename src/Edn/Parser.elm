@@ -33,7 +33,7 @@ ednParser =
             , ednBool
             , ednNil
             , ednKeyword
-            , backtrackable (ednSymbol False)
+            , backtrackable ednSymbol
             , backtrackable ednCharacter
             , backtrackable ednInt
             , backtrackable ednFloat
@@ -272,26 +272,6 @@ ednFloat =
         ]
 
 
-{-| Symbols are used to represent identifiers,
-and should map to something other than strings, if possible.
-
-Symbols begin with a non-numeric character and can contain alphanumeric characters
-and . \* + ! - \_ ? $ % & = < >. If -, + or . are the first character,
-the second character (if any) must be non-numeric.
-Additionally, : # are allowed as constituent characters in
-symbols other than as the first character.
-
-/ has special meaning in symbols. It can be used once only in the middle of a
-symbol to separate the prefix (often a namespace) from the name, e.g.
-my-namespace/foo. / by itself is a legal symbol, but otherwise neither the
-prefix nor the name part can be empty when the symbol contains /.
-
-If a symbol has a prefix and /, the following name component should follow the
-first-character restrictions for symbols as a whole. This is to avoid
-ambiguity in reading contexts where prefixes might be presumed as implicitly
-included namespaces and elided thereafter.
-
--}
 ednSymbol : Parser Edn
 ednSymbol =
     map EdnSymbol (ednSymbolHelper False)
@@ -301,27 +281,31 @@ ednSymbolHelper : Bool -> Parser String
 ednSymbolHelper hasPrefix =
     let
         symbolCharacters =
-            Set.fromList [ '.', '*', '+', '!', '-', '_', '?', '$', '%', '&', '=', '<', '>' ]
+            Set.fromList [ '.', '*', '+', '!', '-', '_', '?', '$', '%', '&', '=', '<', '>', '#' ]
     in
     backtrackable
-        (succeed (\plusmin alphaNum prefix suffix -> plusmin ++ alphaNum ++ prefix ++ suffix)
-            |= variable
-                { start = \c -> Set.member c (Set.fromList [ '-', '+' ])
-                , inner = always False
-                , reserved = Set.empty
-                }
-            |= variable
-                { start = Char.isAlpha
-                , inner = always False
-                , reserved = Set.empty
-                }
+        (succeed (\prefix suffix -> prefix ++ suffix)
             |= oneOf
-                [ variable
-                    { start = \c -> Char.isAlphaNum c || Set.member c symbolCharacters
+                [ succeed (++)
+                    |= variable
+                        { start = \c -> Set.member c (Set.fromList [ '-', '+' ])
+                        , inner = always False
+                        , reserved = Set.empty
+                        }
+                    |= variable
+                        { start = Char.isAlpha
+                        , inner = \c -> Char.isAlphaNum c || Set.member c symbolCharacters
+                        , reserved = Set.empty
+                        }
+                , variable
+                    { start =
+                        \c ->
+                            Char.isAlpha c
+                                || Set.member c
+                                    (Set.diff symbolCharacters (Set.fromList [ '-', '+', '#' ]))
                     , inner = \c -> Char.isAlphaNum c || Set.member c symbolCharacters
                     , reserved = Set.empty
                     }
-                , succeed ""
                 ]
             |= oneOf
                 [ token "/"
