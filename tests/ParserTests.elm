@@ -121,6 +121,7 @@ suite =
                     , ( "a.a", EdnSymbol "a.a" )
                     , ( "a#a", EdnSymbol "a#a" )
                     , ( "-", EdnSymbol "-" )
+                    , ( "+", EdnSymbol "+" )
                     ]
         , test "tags" <|
             \_ ->

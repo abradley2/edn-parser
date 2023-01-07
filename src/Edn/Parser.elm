@@ -33,10 +33,10 @@ ednParser =
             , ednBool
             , ednNil
             , ednKeyword
-            , backtrackable ednSymbol
             , backtrackable ednCharacter
             , backtrackable ednInt
             , backtrackable ednFloat
+            , backtrackable ednSymbol
             , backtrackable (lazy (\_ -> ednTag))
             , lazy (\_ -> ednSet)
             , lazy (\_ -> ednVector)
@@ -274,7 +274,14 @@ ednFloat =
 
 ednSymbol : Parser Edn
 ednSymbol =
-    map EdnSymbol (ednSymbolHelper False)
+    oneOf
+        [ map EdnSymbol (ednSymbolHelper False)
+        , oneOf
+            (List.map
+                (\c -> map (always (EdnSymbol <| String.fromChar c)) (keyword (String.fromChar c)))
+                [ '.', '*', '+', '!', '-', '_', '?', '$', '%', '&', '=', '<', '>' ]
+            )
+        ]
 
 
 ednSymbolHelper : Bool -> Parser String
