@@ -60,7 +60,7 @@ suite =
                     [ ( Json.Encode.encode 0 (Json.Encode.string ""), EdnString "" )
                     , ( Json.Encode.encode 0 (Json.Encode.string "\\"), EdnString "\\" )
                     , ( Json.Encode.encode 0 (Json.Encode.string "\n"), EdnString "\n" )
-                    , ( "\"a string\\twith\\\\escape\\\"'s\"", EdnString "a string\twith\\escape\"'s" )
+                    , ( "\"a string\\twith\\\\tttt\\\"'s\"", EdnString "a string\twith\\tttt\"'s" )
                     , ( """ "me & you \\u0026 them" """, EdnString "me & you & them" )
                     , ( "\"\\\\00\"", EdnString "\\00" )
                     , ( stringWithNewLine, EdnString "a\n  b\n" )
@@ -120,6 +120,31 @@ suite =
                     , ( "a/a...", EdnSymbol "a/a..." )
                     , ( "a.a", EdnSymbol "a.a" )
                     , ( "a#a", EdnSymbol "a#a" )
+                    , ( "-", EdnSymbol "-" )
+                    ]
+        , test "tags" <|
+            \_ ->
+                checkParsing
+                    [ ( """#foo/bar "hello there" """, EdnTag "foo" "bar" (EdnString "hello there") )
+                    , ( """#foo/bar [1 2 3] """
+                      , EdnTag "foo"
+                            "bar"
+                            (EdnVector
+                                (Array.fromList [ EdnInt 1, EdnInt 2, EdnInt 3 ])
+                            )
+                      )
+                    , ( """#foo/bar #{1 2 3} """
+                      , EdnTag "foo" "bar" (EdnSet [ EdnInt 1, EdnInt 2, EdnInt 3 ])
+                      )
+                    , ( """#foo/bar {:a 1 :b 2} """
+                      , EdnTag "foo"
+                            "bar"
+                            (EdnMap
+                                [ ( EdnKeyword Nothing "a", EdnInt 1 )
+                                , ( EdnKeyword Nothing "b", EdnInt 2 )
+                                ]
+                            )
+                      )
                     ]
         , test "example big edn document" <|
             \_ ->

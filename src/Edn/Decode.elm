@@ -1,8 +1,19 @@
 module Edn.Decode exposing (..)
 
 import Array exposing (Array)
+import Dict exposing (Dict)
 import Edn exposing (Edn(..))
 import Set exposing (Set)
+
+
+formatCtx : Context -> String
+formatCtx ctx =
+    case ctx.path of
+        Just path ->
+            " - Path: " ++ String.join ", " path
+
+        Nothing ->
+            ""
 
 
 showError : Edn -> Edn -> Context -> String
@@ -11,13 +22,7 @@ showError expected found ctx =
         ++ showType expected
         ++ " - Found: "
         ++ showType found
-        ++ (case ctx.path of
-                Just path ->
-                    " - Path: " ++ String.join ", " path
-
-                Nothing ->
-                    ""
-           )
+        ++ formatCtx ctx
 
 
 showType : Edn -> String
@@ -75,6 +80,70 @@ type alias Decoder a =
     Context -> Edn -> Result String a
 
 
+withCtx : String -> Decoder a -> Decoder a
+withCtx key decoder ctx edn =
+    case
+        decoder
+            { ctx
+                | path =
+                    ctx.path
+                        |> Maybe.map (\path -> path ++ [ key ])
+                        |> Maybe.withDefault [ key ]
+                        |> Just
+            }
+            edn
+    of
+        Ok value ->
+            Ok value
+
+        Err err ->
+            Err err
+
+
+find : (a -> Bool) -> List a -> Maybe a
+find check items =
+    case items of
+        [] ->
+            Nothing
+
+        x :: xs ->
+            if check x then
+                Just x
+
+            else
+                find check xs
+
+
+atKey : Edn -> Decoder Edn
+atKey key =
+    ednMap raw raw
+        |> andThen
+            (\rawList ->
+                case find (Tuple.first >> (==) key) rawList of
+                    Just rawValue ->
+                        succeed <| Tuple.second rawValue
+
+                    Nothing ->
+                        fail <| "Key " ++ show key ++ " not found"
+            )
+        |> withCtx (show key)
+
+
+atIndex : Int -> Decoder Edn
+atIndex index =
+    vector raw
+        |> andThen
+            (\array ->
+                case Array.get index array of
+                    Just rawValue ->
+                        succeed rawValue
+
+                    Nothing ->
+                        fail <| "Index " ++ String.fromInt index ++ " out of bounds "
+            )
+        |> withCtx (String.fromInt index)
+
+
 succeed : a -> Decoder a
 succeed value _ _ =
     Ok value
@@ -114,53 +183,65 @@ map fn decoder ctx edn =
 
 map2 : (a -> b -> c) -> Decoder a -> Decoder b -> Decoder c
 map2 fn decoderA decoderB =
-    map fn decoderA
-        |> andMap decoderB
+    map fn (withCtx "Field 1" decoderA)
+        |> andMap (withCtx "Field 2" decoderB)
 
 
 map3 : (a -> b -> c -> d) -> Decoder a -> Decoder b -> Decoder c -> Decoder d
 map3 fn decoderA decoderB decoderC =
-    map fn decoderA
-        |> andMap decoderB
-        |> andMap decoderC
+    map fn (withCtx "Field 1" decoderA)
+        |> andMap (withCtx "Field 2" decoderB)
+        |> andMap (withCtx "Field 3" decoderC)
 
 
 map4 : (a -> b -> c -> d -> e) -> Decoder a -> Decoder b -> Decoder c -> Decoder d -> Decoder e
 map4 fn decoderA decoderB decoderC decoderD =
-    map fn decoderA
-        |> andMap decoderB
-        |> andMap decoderC
-        |> andMap decoderD
+    map fn (withCtx "Field 1" decoderA)
+        |> andMap (withCtx "Field 2" decoderB)
+        |> andMap (withCtx "Field 3" decoderC)
+        |> andMap (withCtx "Field 4" decoderD)
 
 
 map5 : (a -> b -> c -> d -> e -> f) -> Decoder a -> Decoder b -> Decoder c -> Decoder d -> Decoder e -> Decoder f
 map5 fn decoderA decoderB decoderC decoderD decoderE =
-    map fn decoderA
-        |> andMap decoderB
-        |> andMap decoderC
-        |> andMap decoderD
-        |> andMap decoderE
+    map fn (withCtx "Field 1" decoderA)
+        |> andMap (withCtx "Field 2" decoderB)
+        |> andMap (withCtx "Field 3" decoderC)
+        |> andMap (withCtx "Field 4" decoderD)
+        |> andMap (withCtx "Field 5" decoderE)
 
 
 map6 : (a -> b -> c -> d -> e -> f -> g) -> Decoder a -> Decoder b -> Decoder c -> Decoder d -> Decoder e -> Decoder f -> Decoder g
 map6 fn decoderA decoderB decoderC decoderD decoderE decoderF =
-    map fn decoderA
-        |> andMap decoderB
-        |> andMap decoderC
-        |> andMap decoderD
-        |> andMap decoderE
-        |> andMap decoderF
+    map fn (withCtx "Field 1" decoderA)
+        |> andMap (withCtx "Field 2" decoderB)
+        |> andMap (withCtx "Field 3" decoderC)
+        |> andMap (withCtx "Field 4" decoderD)
+        |> andMap (withCtx "Field 5" decoderE)
+        |> andMap (withCtx "Field 6" decoderF)
 
 
 map7 : (a -> b -> c -> d -> e -> f -> g -> h) -> Decoder a -> Decoder b -> Decoder c -> Decoder d -> Decoder e -> Decoder f -> Decoder g -> Decoder h
 map7 fn decoderA decoderB decoderC decoderD decoderE decoderF decoderG =
-    map fn decoderA
-        |> andMap decoderB
-        |> andMap decoderC
-        |> andMap decoderD
-        |> andMap decoderE
-        |> andMap decoderF
-        |> andMap decoderG
+    map fn (withCtx "Field 1" decoderA)
+        |> andMap (withCtx "Field 2" decoderB)
+        |> andMap (withCtx "Field 3" decoderC)
+        |> andMap (withCtx "Field 4" decoderD)
+        |> andMap (withCtx "Field 5" decoderE)
+        |> andMap (withCtx "Field 6" decoderF)
+        |> andMap (withCtx "Field 7" decoderG)
+
+
+map8 : (a -> b -> c -> d -> e -> f -> g -> h -> i) -> Decoder a -> Decoder b -> Decoder c -> Decoder d -> Decoder e -> Decoder f -> Decoder g -> Decoder h -> Decoder i
+map8 fn decoderA decoderB decoderC decoderD decoderE decoderF decoderG decoderH =
+    map fn (withCtx "Field 1" decoderA)
+        |> andMap (withCtx "Field 2" decoderB)
+        |> andMap (withCtx "Field 3" decoderC)
+        |> andMap (withCtx "Field 4" decoderD)
+        |> andMap (withCtx "Field 5" decoderE)
+        |> andMap (withCtx "Field 6" decoderF)
+        |> andMap (withCtx "Field 7" decoderG)
+        |> andMap (withCtx "Field 8" decoderH)
 
 
 decode : Decoder a -> Edn -> Result String a
@@ -221,6 +302,23 @@ set decoder ctx value =
 setBy : Decoder a -> (a -> comparable) -> Decoder (Set comparable)
 setBy decoder toComparable =
     map (List.map toComparable >> Set.fromList) (set decoder)
+
+
+ednMap : Decoder key -> Decoder value -> Decoder (List ( key, value ))
+ednMap keyDecoder valueDecoder ctx value =
+    case value of
+        EdnMap mapValue ->
+            decode (list (map2 Tuple.pair keyDecoder valueDecoder)) (EdnMap mapValue)
+
+        _ ->
+            Err <| showError (EdnMap []) value ctx
+
+
+ednMapBy : Decoder key -> Decoder value -> (key -> comparable) -> Decoder (Dict comparable value)
+ednMapBy keyDecoder valueDecoder toComparable =
+    map
+        (List.map (\( key, value ) -> ( toComparable key, value )) >> Dict.fromList)
+        (ednMap keyDecoder valueDecoder)
 
 
 vector : Decoder a -> Decoder (Array a)
@@ -292,3 +390,98 @@ nil ctx value =
 
         _ ->
             Err <| showError EdnNil value ctx
+
+
+oneOf : List (Decoder a) -> Decoder a
+oneOf decoders =
+    oneOfHelper decoders Nothing
+
+
+oneOfHelper : List (Decoder a) -> Maybe String -> Decoder a
+oneOfHelper decoders maybeErr ctx value =
+    case decoders of
+        [] ->
+            case maybeErr of
+                Just err ->
+                    Err err
+
+                Nothing ->
+                    Err ("No Match " ++ formatCtx ctx)
+
+        decoder :: next ->
+            case decoder ctx value of
+                Ok result ->
+                    Ok result
+
+                Err err ->
+                    oneOfHelper next (Just err) ctx value
+
+
+optional : Decoder a -> Decoder (Maybe a)
+optional decoder =
+    oneOf [ map Just decoder, map (always Nothing) nil ]
+
+
+try : Decoder a -> Decoder (Result String a)
+try decoder ctx value =
+    case decoder ctx value of
+        Ok result ->
+            Ok (Ok result)
+
+        Err err ->
+            Ok (Err err)
+
+
+show : Edn -> String
+show edn =
+    case edn of
+        EdnString s ->
+            "\"" ++ s ++ "\""
+
+        EdnVariable s ->
+            "#" ++ s
+
+        EdnKeyword ns s ->
+            case ns of
+                Just nsval ->
+                    ":" ++ nsval ++ "/" ++ s
+
+                Nothing ->
+                    ":" ++ s
+
+        EdnList l ->
+            "(" ++ String.join " " (List.map show l) ++ ")"
+
+        EdnVector a ->
+            "[" ++ String.join " " (Array.toList (Array.map show a)) ++ "]"
+
+        EdnMap l ->
+            "{" ++ String.join " " (List.map (\( k, v ) -> show k ++ " " ++ show v) l) ++ "}"
+
+        EdnSet l ->
+            "#{" ++ String.join " " (List.map show l) ++ "}"
+
+        EdnNil ->
+            "nil"
+
+        EdnBool b ->
+            if b then
+                "true"
+
+            else
+                "false"
+
+        EdnInt i ->
+            String.fromInt i
+
+        EdnFloat f ->
+            String.fromFloat f
+
+        EdnChar c ->
+            "\\" ++ String.fromChar c
+
+        EdnTag ns tag v ->
+            "#" ++ ns ++ "/" ++ tag ++ " " ++ show v
+
+        EdnSymbol s ->
+            s

@@ -28,6 +28,7 @@ type Edn
     | EdnChar Char
     -- user defined tags have a namespace and a name, followed by a nested edn value
     | EdnTag String String Edn
+    | EdnSymbol String
 ```
 
 # Decoding/Encoding
