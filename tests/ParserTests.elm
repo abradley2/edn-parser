@@ -111,6 +111,12 @@ suite =
                             (Array.fromList [ EdnList [], EdnSet [], EdnMap [] ])
                       )
                     ]
+        , test "symbols" <|
+            \_ ->
+                checkParsing
+                    [ ( "a", EdnSymbol "a" )
+                    , ( "-1", EdnInt -1 )
+                    ]
         , test "example big edn document" <|
             \_ ->
                 case run ednParser TestCases.casePlaylist of

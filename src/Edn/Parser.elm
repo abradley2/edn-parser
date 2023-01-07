@@ -1,7 +1,4 @@
-module Edn.Parser exposing
-    ( ednParser
-    , runParser
-    )
+module Edn.Parser exposing (..)
 
 {-| A parser for the `Edn` union type, for use with [elm/parser](https://package.elm-lang.org/packages/elm/parser/latest/)
 
@@ -36,10 +33,10 @@ ednParser =
             , ednBool
             , ednNil
             , ednKeyword
-            , ednCharacter
+            , backtrackable (ednSymbol False)
+            , backtrackable ednCharacter
             , backtrackable ednInt
             , backtrackable ednFloat
-            , ednSymbol
             , backtrackable (lazy (\_ -> ednTag))
             , lazy (\_ -> ednSet)
             , lazy (\_ -> ednVector)
@@ -297,40 +294,17 @@ included namespaces and elided thereafter.
 -}
 ednSymbol : Parser Edn
 ednSymbol =
-    oneOf
-        [ -- first check if this is just a standalone symbol. This can
-          -- uniquely start with "/" if that is the _only_ character in the
-          -- symbol
-          variable
-            { start =
-                \c ->
-                    Set.member c
-                        (Set.fromList
-                            [ '/'
-                            , '.'
-                            , '*'
-                            , '+'
-                            , '!'
-                            , '-'
-                            , '_'
-                            , '?'
-                            , '$'
-                            , '%'
-                            , '&'
-                            , '='
-                            , '<'
-                            , '>'
-                            ]
-                        )
-            , inner = always False
-            , reserved = Set.empty
-            }
+    map EdnSymbol (ednSymbolHelper False)
 
-        -- next we have another special case. If a symbol starts with a
-        -- + or a - the _second_ character must be a non-numeric
-        -- alphabetical character. Presumably this is to distinguish it
-        -- between integers and floats
-        , succeed (\prefix alphaNum rest -> prefix ++ alphaNum ++ rest)
+
+ednSymbolHelper : Bool -> Parser String
+ednSymbolHelper hasPrefix =
+    let
+        symbolCharacters =
+            Set.fromList [ '.', '*', '+', '!', '-', '_', '?', '$', '%', '&', '=', '<', '>' ]
+    in
+    backtrackable
+        (succeed (\plusmin alphaNum prefix suffix -> plusmin ++ alphaNum ++ prefix ++ suffix)
             |= variable
                 { start = \c -> Set.member c (Set.fromList [ '-', '+' ])
                 , inner = always False
@@ -342,7 +316,23 @@ ednSymbol =
                 , reserved = Set.empty
                 }
             |= oneOf
-                [ succeed ""
+                [ variable
+                    { start = \c -> Char.isAlphaNum c || Set.member c symbolCharacters
+                    , inner = \c -> Char.isAlphaNum c || Set.member c symbolCharacters
+                    , reserved = Set.empty
+                    }
+                , succeed ""
                 ]
-        ]
-        |> map EdnSymbol
+            |= oneOf
+                [ token "/"
+                    |> andThen
+                        (\_ ->
+                            if hasPrefix then
+                                problem "No more than one prefix namespace allowed in symbol"
+
+                            else
+                                map (\v -> "/" ++ v) (ednSymbolHelper True)
+                        )
+                , succeed ""
+                ]
+        )
