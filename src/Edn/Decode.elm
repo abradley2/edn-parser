@@ -1,4 +1,35 @@
-module Edn.Decode exposing (..)
+module Edn.Decode exposing
+    ( andMap
+    , andThen
+    , atIndex
+    , atKey
+    , bool
+    , char
+    , ednMap
+    , ednMapBy
+    , float
+    , int
+    , keyword
+    , list
+    , map
+    , map2
+    , map3
+    , map4
+    , map5
+    , map6
+    , map7
+    , map8
+    , nil
+    , oneOf
+    , optional
+    , set
+    , setBy
+    , string
+    , symbol
+    , tag
+    , try
+    , vector
+    )
 
 import Array exposing (Array)
 import Dict exposing (Dict)
@@ -392,6 +423,38 @@ nil ctx value =
             Err <| showError EdnNil value ctx
 
 
+keyword : Decoder ( Maybe String, String )
+keyword ctx value =
+    case value of
+        EdnKeyword ns kw ->
+            Ok ( ns, kw )
+
+        _ ->
+            Err <| showError (EdnKeyword Nothing "") value ctx
+
+
+symbol : Decoder String
+symbol ctx value =
+    case value of
+        EdnSymbol symbolValue ->
+            Ok symbolValue
+
+        _ ->
+            Err <| showError (EdnSymbol "") value ctx
+
+
+tag : Decoder a -> Decoder ( String, String, a )
+tag decoder ctx value =
+    case value of
+        EdnTag ns tg val ->
+            -- TODO: add tag name to context here
+            decoder ctx val
+                |> Result.map (\v -> ( ns, tg, v ))
+
+        _ ->
+            Err <| showError (EdnTag "" "" EdnNil) value ctx
+
+
 oneOf : List (Decoder a) -> Decoder a
 oneOf decoders =
     oneOfHelper decoders Nothing
@@ -480,8 +543,8 @@ show edn =
         EdnChar c ->
             "\\" ++ String.fromChar c
 
-        EdnTag ns tag v ->
-            "#" ++ ns ++ "/" ++ tag ++ " " ++ show v
+        EdnTag ns name v ->
+            "#" ++ ns ++ "/" ++ name ++ " " ++ show v
 
         EdnSymbol s ->
             s
