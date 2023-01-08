@@ -2,7 +2,7 @@ module ParserTests exposing (..)
 
 import Array
 import Edn exposing (..)
-import Edn.Parser exposing (ednParser)
+import Edn.Parser exposing (edn)
 import Expect exposing (Expectation)
 import Fuzz exposing (..)
 import Json.Encode
@@ -14,7 +14,7 @@ import TestCases
 
 checkParsing : List ( String, Edn ) -> Expectation
 checkParsing =
-    List.map (Tuple.mapFirst (run ednParser))
+    List.map (Tuple.mapFirst (run edn))
         >> List.map (\( actual, expected ) -> always (Expect.equal actual (Ok expected)))
         >> (\predicates -> Expect.all predicates ())
 
@@ -149,7 +149,7 @@ suite =
                     ]
         , test "example big edn document" <|
             \_ ->
-                case run ednParser TestCases.casePlaylist of
+                case run edn TestCases.casePlaylist of
                     Ok _ ->
                         Expect.pass
 

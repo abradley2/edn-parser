@@ -1,11 +1,11 @@
-module Edn.Parser exposing (..)
+module Edn.Parser exposing (edn, run)
 
 {-| A parser for the `Edn` union type, for use with [elm/parser](https://package.elm-lang.org/packages/elm/parser/latest/)
 
 
 # Main Functionality
 
-@docs edn
+@docs edn, run
 
 -}
 
@@ -17,15 +17,18 @@ import Parser exposing (..)
 import Set
 
 
-runParser : String -> Result (List DeadEnd) Edn
-runParser =
-    Parser.run ednParser
+{-| Convenience function for using `elm/parser` to run the `edn` parser in this module against
+a given string
+-}
+run : String -> Result (List DeadEnd) Edn
+run =
+    Parser.run edn
 
 
 {-| Parser for the Edn datatype
 -}
-ednParser : Parser Edn
-ednParser =
+edn : Parser Edn
+edn =
     succeed identity
         |. ednWhitespace
         |= oneOf
@@ -72,7 +75,7 @@ ednCharacter =
     let
         charCodeParser : String -> Parser Char
         charCodeParser code =
-            case run unicodeEscape ("u" ++ code) of
+            case Parser.run unicodeEscape ("u" ++ code) of
                 Ok charCode ->
                     succeed charCode
 
@@ -208,7 +211,7 @@ ednSequenceHelper end items =
             )
         , succeed (\item -> Loop (item :: items))
             |. ednWhitespace
-            |= ednParser
+            |= edn
         ]
 
 
@@ -229,7 +232,7 @@ ednTag =
                     , reserved = Set.fromList [ "#", "/" ]
                     }
            )
-        |= ednParser
+        |= edn
 
 
 ednString : Parser Edn
