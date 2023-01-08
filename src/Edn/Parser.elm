@@ -1,11 +1,11 @@
-module Edn.Parser exposing (edn, run)
+module Edn.Parser exposing (edn, run, Error)
 
 {-| A parser for the `Edn` union type, for use with [elm/parser](https://package.elm-lang.org/packages/elm/parser/latest/)
 
 
 # Main Functionality
 
-@docs edn, run
+@docs edn, run, Error
 
 -}
 
@@ -15,6 +15,12 @@ import Edn.Parser.String
 import Edn.Parser.Unicode exposing (unicodeEscape)
 import Parser exposing (..)
 import Set
+
+
+{-| Convenience type alias for `elm/parser`'s `List DeadEnd` type
+-}
+type alias Error =
+    List DeadEnd
 
 
 {-| Convenience function for using `elm/parser` to run the `edn` parser in this module against

@@ -5,6 +5,9 @@ A library for parsing
 
 This is very useful for communicating between Clojure and Elm.
 
+This is just for _parsing_ edn data into a `Edn` elm type. For full decoding check out
+[edn-decode](https://package.elm-lang.org/packages/abradley2/edn-decode/latest/)
+
 # The "Edn" Type
 
 ```elm
@@ -31,24 +34,26 @@ type Edn
     | EdnSymbol String
 ```
 
+# Usage
+
+```elm
+import Edn exposing (Edn)
+import Edn.Parser exposing (Error)
+
+result : Result Error Edn
+result = Edn.Parser.run """(1 true {:hello "world"})""" 
+```
+
 # Decoding/Encoding
 
 This library doesn't provide Encoders and Decoders for the types in the `Edn` module.
 
-Extensible Data Notation has a few interesting types that don't necessarily translate 1 to 1
+Extensible Data Notation has a few interesting types that don't necessarily translate cleanly to Elm
 without making some decisions about how that transform happens.
 
-* Edn maps can have keys that are not strings. The `EdnMap` type in this library represents
-them as `List (Edn, Edn)`.
-* Edn has sets that can contain more than what Elm considers "comparable". The `EdnSet` type in this
-library represents them as `List Edn`.
-* Tags are a cool feature of Edn that can instruct a client consuming the data how to handle that
-tagged data differently. There are a couple different possible ways a decoder library can 
-represent this.
-
-So there's several things about .edn that manifest as implementation details for decoder libraries
-to deal with. I plan to create a decoder/encode package to accompany this, but want to keep it
-separate in case anyone wants to write their own that handles things differently than I do.
+For full decoding check out
+[edn-decode](https://package.elm-lang.org/packages/abradley2/edn-decode/latest/)
+or any other library that implements decoders for the `Edn` type.
 
 # Prior Art
 
