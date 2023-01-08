@@ -36,6 +36,13 @@ run =
 edn : Parser Edn
 edn =
     succeed identity
+        |= ednHelper
+        |. end
+
+
+ednHelper : Parser Edn
+ednHelper =
+    succeed identity
         |. ednWhitespace
         |= oneOf
             [ ednString
@@ -217,7 +224,7 @@ ednSequenceHelper end items =
             )
         , succeed (\item -> Loop (item :: items))
             |. ednWhitespace
-            |= edn
+            |= ednHelper
         ]
 
 
@@ -238,7 +245,7 @@ ednTag =
                     , reserved = Set.fromList [ "#", "/" ]
                     }
            )
-        |= edn
+        |= ednHelper
 
 
 ednString : Parser Edn

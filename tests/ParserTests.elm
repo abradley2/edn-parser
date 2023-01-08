@@ -12,6 +12,16 @@ import Test exposing (Test, describe, fuzz, test)
 import TestCases
 
 
+expectError : Result error value -> Expectation
+expectError r =
+    case r of
+        Ok _ ->
+            Expect.fail "Expected error"
+
+        Err _ ->
+            Expect.pass
+
+
 checkParsing : List ( String, Edn ) -> Expectation
 checkParsing =
     List.map (Tuple.mapFirst (run edn))
@@ -155,4 +165,13 @@ suite =
 
                     Err err ->
                         Expect.equal [] err
+        , test "keyword errors" <|
+            \_ ->
+                Expect.all
+                    [ \_ -> expectError (run edn ":")
+                    , \_ -> expectError (run edn ":a/")
+                    , \_ -> expectError (run edn ":/a")
+                    , \_ -> expectError (run edn ":a/b/c")
+                    ]
+                    ()
         ]
