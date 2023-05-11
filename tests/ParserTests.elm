@@ -1,8 +1,9 @@
 module ParserTests exposing (..)
 
 import Array
+import Dict
 import Edn exposing (..)
-import Edn.Parser exposing (edn)
+import Edn.Parser exposing (Definitions, edn)
 import Expect exposing (Expectation)
 import Fuzz exposing (..)
 import Json.Encode
@@ -36,10 +37,51 @@ stringWithNewLine =
 \""""
 
 
+ednWithTags : String
+ednWithTags =
+    """{:sum #test-app/int-add (6 3)}"""
+
+
+type TestAppError
+    = InvalidIntSumArg Edn
+    | ParserError Edn.Parser.Error
+
+
+testAppDefinitions : Definitions TestAppError
+testAppDefinitions =
+    ( "test-app"
+    , Dict.fromList
+        [ ( "int-add"
+          , \args ->
+                case args of
+                    EdnList ((EdnInt a) :: (EdnInt b) :: []) ->
+                        Ok (EdnInt (a + b))
+
+                    _ ->
+                        Err (InvalidIntSumArg args)
+          )
+        ]
+    )
+
+
+result =
+    ednWithTags
+        |> (Edn.Parser.run >> Result.mapError ParserError)
+        |> Result.map (Edn.Parser.applyDataReaders testAppDefinitions)
+
+
 suite : Test
 suite =
     describe "Parsing"
-        [ test "booleans" <|
+        [ test "applyDataReader on tags" <|
+            \_ ->
+                ednWithTags
+                    |> Edn.Parser.run
+                    |> Result.mapError ParserError
+                    |> Result.andThen (Edn.Parser.applyDataReaders testAppDefinitions)
+                    |> Result.map (Expect.equal (EdnMap [ ( EdnKeyword Nothing "sum", EdnInt 9 ) ]))
+                    |> Result.withDefault (Expect.fail "Failed to parse")
+        , test "booleans" <|
             \_ ->
                 checkParsing
                     [ ( "true", EdnBool True )

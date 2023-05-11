@@ -52,7 +52,7 @@ Extensible Data Notation has a few interesting types that don't necessarily tran
 without making some decisions about how that transform happens.
 
 For full decoding check out
-[edn-decode](https://package.elm-lang.org/packages/abradley2/edn-decode/latest/)
+[edn-decoder](https://package.elm-lang.org/packages/abradley2/edn-decoder/latest/)
 or any other library that implements decoders for the `Edn` type.
 
 # Prior Art

@@ -1,15 +1,25 @@
-module Edn.Parser exposing (edn, run, Error)
+module Edn.Parser exposing
+    ( edn, run, Error
+    , Definitions, applyDataReaders
+    )
 
-{-| A parser for the `Edn` union type, for use with [elm/parser](https://package.elm-lang.org/packages/elm/parser/latest/)
+{-| A parser for the `Edn` union type, for use with [elm/parser](https://package.elm-lang.org/packages/elm/parser/latest/).
+Supports full extensibility through custom data readers.
 
 
 # Main Functionality
 
 @docs edn, run, Error
 
+
+# Extensibility
+
+@docs Definitions, applyDataReaders
+
 -}
 
 import Array exposing (Array)
+import Dict exposing (Dict)
 import Edn exposing (Edn(..))
 import Edn.Parser.String
 import Edn.Parser.Unicode exposing (unicodeEscape)
@@ -343,3 +353,117 @@ ednSymbolHelper hasPrefix =
                 , succeed ""
                 ]
         )
+
+
+{-| Just as Clojure supports Edn extensibility through data\_readers.clj maps, this parser supports
+supplying definitions to apply transformations to tagged values under a certain namespace. The
+Definitions type is a tuple of the namespace to interpret, and a dictionary of transforms for
+tags under that namespace.
+
+Here is a short example of a "sum" tag under our application namespace that will sum up Edn integers
+in a list following it
+
+-}
+type alias Definitions error =
+    ( String, Dict String (Edn -> Result error Edn) )
+
+
+{-| Apply a set of Defintions to an Edn value.
+Here is a full example of how we might add extensibility to Edn data consumed by our application
+
+    ednWithTags : String
+    ednWithTags =
+        """{:sum #test-app/int-add (6 3)}"""
+
+    type TestAppError
+        = InvalidIntSumArg Edn
+        | ParserError Edn.Parser.Error
+
+    testAppDefinitions : Definitions TestAppError
+    testAppDefinitions =
+        ( "test-app"
+        , Dict.fromList
+            [ ( "int-add"
+              , \args ->
+                    case args of
+                        EdnList ((EdnInt a) :: (EdnInt b) :: []) ->
+                            Ok (EdnInt (a + b))
+
+                        _ ->
+                            Err (InvalidIntSumArg args)
+              )
+            ]
+        )
+
+    result =
+        ednWithTags
+            |> (Edn.Parser.run >> Result.mapError ParserError)
+            |> Result.map (Edn.Parser.applyDataReaders testAppDefinitions)
+
+-}
+applyDataReaders : Definitions error -> Edn -> Result error Edn
+applyDataReaders ( ns, defs ) ednVal =
+    case ednVal of
+        EdnTag ns_ tag expr ->
+            case ( ns_ == ns, Dict.get tag defs ) of
+                ( True, Just fn ) ->
+                    applyDataReaders ( ns, defs ) expr
+                        |> Result.andThen fn
+
+                _ ->
+                    Ok ednVal
+
+        EdnList exprs ->
+            List.foldr
+                (\exp acc ->
+                    Result.map2
+                        (::)
+                        (applyDataReaders ( ns, defs ) exp)
+                        acc
+                )
+                (Result.Ok [])
+                exprs
+                |> Result.map EdnList
+
+        EdnMap exprs ->
+            List.foldr
+                (\( kExp, vExp ) acc ->
+                    Result.map2
+                        (::)
+                        (Result.map2
+                            Tuple.pair
+                            (applyDataReaders ( ns, defs ) kExp)
+                            (applyDataReaders ( ns, defs ) vExp)
+                        )
+                        acc
+                )
+                (Result.Ok [])
+                exprs
+                |> Result.map EdnMap
+
+        EdnSet exprs ->
+            List.foldr
+                (\exp acc ->
+                    Result.map2
+                        (::)
+                        (applyDataReaders ( ns, defs ) exp)
+                        acc
+                )
+                (Result.Ok [])
+                exprs
+                |> Result.map EdnSet
+
+        EdnVector exprs ->
+            Array.foldr
+                (\exp acc ->
+                    Result.map2
+                        (::)
+                        (applyDataReaders ( ns, defs ) exp)
+                        acc
+                )
+                (Result.Ok [])
+                exprs
+                |> Result.map (Array.fromList >> EdnVector)
+
+        _ ->
+            Ok ednVal
