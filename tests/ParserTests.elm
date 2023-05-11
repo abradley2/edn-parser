@@ -64,12 +64,6 @@ testAppDefinitions =
     )
 
 
-result =
-    ednWithTags
-        |> (Edn.Parser.run >> Result.mapError ParserError)
-        |> Result.map (Edn.Parser.applyDataReaders testAppDefinitions)
-
-
 suite : Test
 suite =
     describe "Parsing"
@@ -80,6 +74,14 @@ suite =
                     |> Result.mapError ParserError
                     |> Result.andThen (Edn.Parser.applyDataReaders testAppDefinitions)
                     |> Result.map (Expect.equal (EdnMap [ ( EdnKeyword Nothing "sum", EdnInt 9 ) ]))
+                    |> Result.withDefault (Expect.fail "Failed to parse")
+        , test "Ignore unknown tags" <|
+            \_ ->
+                """#tag/unknown 1"""
+                    |> Edn.Parser.run
+                    |> Result.mapError ParserError
+                    |> Result.andThen (Edn.Parser.applyDataReaders testAppDefinitions)
+                    |> Result.map (Expect.equal (EdnTag "tag" "unknown" (EdnInt 1)))
                     |> Result.withDefault (Expect.fail "Failed to parse")
         , test "booleans" <|
             \_ ->
