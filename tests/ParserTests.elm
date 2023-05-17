@@ -235,4 +235,10 @@ suite =
                     , \_ -> expectError (run edn ":a/b/c")
                     ]
                     ()
+        , test "taggedMap error" <|
+            \_ ->
+                Expect.all
+                    [ \_ -> expectError (run edn "#foo{a1 1}")
+                    ]
+                    ()
         ]
