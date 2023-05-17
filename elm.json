@@ -3,7 +3,7 @@
     "name": "abradley2/edn-parser",
     "summary": "Parser for Extensible Data Notation in Elm",
     "license": "MIT",
-    "version": "2.2.1",
+    "version": "2.2.2",
     "exposed-modules": [
         "Edn.Parser",
         "Edn"
