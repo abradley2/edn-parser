@@ -302,6 +302,7 @@ ednSymbol : Parser Edn
 ednSymbol =
     oneOf
         [ map EdnSymbol (ednSymbolHelper False)
+        , map (always <| EdnSymbol "/") (token "/")
         , oneOf
             (List.map
                 (\c -> map (always (EdnSymbol <| String.fromChar c)) (keyword (String.fromChar c)))
