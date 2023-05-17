@@ -67,7 +67,18 @@ testAppDefinitions =
 suite : Test
 suite =
     describe "Parsing"
-        [ test "applyDataReader on tags" <|
+        [ test "taggedMap" <|
+            \_ ->
+                """#my-tag{:foo 1 :bar 2}"""
+                    |> Edn.Parser.run
+                    |> Expect.equal
+                        (Ok <|
+                            EdnMap
+                                [ ( EdnKeyword (Just "my-tag") "foo", EdnInt 1 )
+                                , ( EdnKeyword (Just "my-tag") "bar", EdnInt 2 )
+                                ]
+                        )
+        , test "applyDataReader on tags" <|
             \_ ->
                 ednWithTags
                     |> Edn.Parser.run

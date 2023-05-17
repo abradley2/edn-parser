@@ -41,7 +41,8 @@ run =
     Parser.run edn
 
 
-{-| Parser for the Edn datatype
+{-| Parser for the Edn datatype. You likely just want to use `run` instead and don't need the parser
+on its own like this.
 -}
 edn : Parser Edn
 edn =
@@ -63,6 +64,7 @@ ednHelper =
             , backtrackable ednInt
             , backtrackable ednFloat
             , backtrackable ednSymbol
+            , backtrackable ednTaggedMap
             , backtrackable (lazy (\_ -> ednTag))
             , lazy (\_ -> ednSet)
             , lazy (\_ -> ednVector)
@@ -236,6 +238,49 @@ ednSequenceHelper end items =
             |. ednWhitespace
             |= ednHelper
         ]
+
+
+ednTaggedMap : Parser Edn
+ednTaggedMap =
+    andThen identity <|
+        succeed
+            (\ns val ->
+                case val of
+                    EdnMap ednMapVal ->
+                        List.foldr
+                            (\( k, v ) accResult ->
+                                case ( accResult, k ) of
+                                    ( Err _, _ ) ->
+                                        accResult
+
+                                    ( Ok acc, EdnKeyword Nothing tag_ ) ->
+                                        Ok <| ( EdnKeyword (Just ns) tag_, v ) :: acc
+
+                                    _ ->
+                                        Err "Tagged map keys must be keywords"
+                            )
+                            (Ok [])
+                            ednMapVal
+                            |> Result.map EdnMap
+                            |> (\r ->
+                                    case r of
+                                        Ok v ->
+                                            succeed v
+
+                                        Err e ->
+                                            problem e
+                               )
+
+                    _ ->
+                        problem "Tagged map must contain a map"
+            )
+            |. symbol "#"
+            |= variable
+                { start = Char.isAlphaNum
+                , inner = \c -> Char.isAlphaNum c || c == '-' || c == '_'
+                , reserved = Set.fromList [ "#", "/" ]
+                }
+            |= ednMap
 
 
 ednTag : Parser Edn
